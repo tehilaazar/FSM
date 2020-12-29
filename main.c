@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
+#include <stdlib.h>
 
 // struct that represents a line in the test1.fsm
 // file that defines the FSM
@@ -33,23 +35,13 @@ int getNumOfLetter(char letter){
         return -1;
 }
 
-// counts the number of lines in the file
-// useful to know how many different structs
-// of "InputNextState" there will be
-int countLines(char *filePath){
-    char c;
-    int count = 0;
-    FILE* fp = fopen(filePath, "r"); /* should check the result */
-    if (fp==NULL) {
-        printf("File open is unsuccessful\n");
-        return false;
-    }
-    for (c = getc(fp); c!= EOF; c = getc(fp)){
-        if (c == '\n')
-            count++;
-    }
-    fclose(fp);
-    return count;
+void test_getNumOfLetter(){
+    assert(getNumOfLetter('!') ==- 1);
+    assert(getNumOfLetter(' ') == -1);
+    assert(getNumOfLetter('0') == -1);
+    assert(getNumOfLetter('Z') == 51);
+    assert(getNumOfLetter('C') == 28);
+    assert(getNumOfLetter('a') == 0);
 }
 
 // checks if the element is already in the array
@@ -61,13 +53,25 @@ bool checkElem(struct State arr[], int elem, int size ) {
         }
         return 0;
 }
+
+void test_checkElem(){
+    int size = 20;
+    struct State a[size];
+    for (int i = 0; i<size; i++){
+        int r = rand() % size; // generates random number for 0 to 19
+        a[i].name = r;
+        int r2 = (rand() %(481)) + 20; // generates random number from 20 to 500
+        assert(checkElem(a, r2, size) == 0);
+        assert(checkElem(a, r, size) == 1);
+    }
+}
+
 // Looping through list of structs of arrInputStructs to make
 // sure that the "nextState" values are possible states in the FSM
 bool checkNextStateValues(int numLines, struct State arrOfStates[], struct InputNextState arrInputStructs[], int numStates){
     for (int i = 0; i < numLines; i++ ){
         bool stateExists = false;
         for (int j = 0; j < numStates; j++){
-            printf("arrOfStates[y].name is %d and arrInputStructs[z].nextState is %d\n", arrOfStates[j].name, arrInputStructs[i].nextState);
             if (arrInputStructs[i].nextState == arrOfStates[j].name) {
                 stateExists = true;
                 break;
@@ -79,7 +83,44 @@ bool checkNextStateValues(int numLines, struct State arrOfStates[], struct Input
         }
     }
     return true;
+}
 
+void test_checkNextStateValuesTrue(){
+    int numLines = 70;
+    int numStates = 30;
+    struct State b[numStates];
+    for (int j=0; j<numStates; j++){
+        b[j].name = j;
+    }
+    struct InputNextState a[numLines];
+    for (int i=0; i<numLines; i++) {
+        int r = rand() % (numStates-1); // generates random number for 0 to numLines;
+        int r1 = rand() % (numStates-1);
+        char c = (rand() % 26) + 97; // generates random chars from 'a' to 'z' = 97 to 122
+        a[i].state = r;
+        a[i].nextState = r1;
+        a[i].input = c;
+        assert(checkNextStateValues(i+1, b, a, numStates) == true);
+    }
+}
+
+void test_checkNextStateValuesFalse(){
+    int numLines = 70;
+    int numStates = 30;
+    struct State b[numStates];
+    for (int j=0; j<numStates; j++){
+        b[j].name = j;
+    }
+    struct InputNextState a[numLines];
+    for (int i=0; i<numLines; i++) {
+        int r = rand() % (numStates-1); // generates random number for 0 to numLines;
+        int r1 = (rand() % (601)) + 100; // generates random number from 100 to 700
+        char c = (rand() % 26) + 97; // generates random chars from 'a' to 'z' = 97 to 122
+        a[i].state = r;
+        a[i].nextState = r1;
+        a[i].input = c;
+        assert(checkNextStateValues(i+1, b, a, numStates) == false);
+    }
 }
 
 // makes sure FSM has state zero
@@ -89,6 +130,18 @@ bool checkStateZero(int numStates, struct State arrOfStates[]){
             return true;
     }
     return false;
+}
+
+void test_checkStateZero(){
+    int numStates = 100;
+    struct State arrOfStates[numStates];
+    for (int i=0; i<numStates-1; i++){
+        arrOfStates[i].name = (rand() % 1000) + 1; // generates random number between 1 and 1000
+        assert(checkStateZero(i+1, arrOfStates) == false);
+    }
+    arrOfStates[numStates-1].name = 0;
+    assert(checkStateZero(numStates, arrOfStates) == true);
+
 }
 
 // Sets in the array of inputs for each state a default value of -1
@@ -103,6 +156,20 @@ void setDefaultNextStateVal(int numStates, struct State arrOfStates[]){
     }
 }
 
+void test_setDefaultNextStateVal(){
+    int numStates = 1000;
+    struct State a[1000];
+    setDefaultNextStateVal(numStates, a);
+    for (int i=0; i < numStates; i++)
+        for (int j = 0; j < 52; j++) {
+            assert(a[i].inputs[j] == -1);
+        }
+    for (int i=0; i < numStates; i++){
+        a[i].inputs[i] = rand() % 400;
+        assert(a[i].inputs[i] != -1);
+    }
+}
+
 // Adds all the information from the arrInputStructs into the State structs
 void fillStructStates(int numLines, struct InputNextState arrInputStructs[], int numStates, struct State arrOfStates[]){
     for (int i=0; i<numLines; i++){
@@ -111,19 +178,35 @@ void fillStructStates(int numLines, struct InputNextState arrInputStructs[], int
             if (s == arrOfStates[j].name){
                 int numChar = getNumOfLetter(arrInputStructs[i].input);
                 arrOfStates[j].inputs[numChar] = arrInputStructs[i].nextState;
-                printf("Now state %d has in its list of inputs[%d] the value  %d\n", s, numChar, arrInputStructs[i].nextState);
                 break;
             }
         }
     }
 }
 
+void test_fillStructStates(){
+    int numLines = 30;
+    int numStates = 7;
+    struct State b[numStates];
+    for (int j=0; j<numStates; j++){
+        b[j].name = j;
+    }
+    struct InputNextState a[numLines];
+    for (int i=0; i<30; i++) {
+        int r = rand() % (numStates-1); // generates random number for 0 to numLines;
+        int r1 = rand() % (numStates-1);
+        char c = (rand() % 26) + 97; // generates random chars from 'a' to 'z' = 97 to 122
+        a[i].state = r;
+        a[i].nextState = r1;
+        a[i].input = c;
+        fillStructStates(i+1, a, numStates, b);
+        int s = b[r].inputs[getNumOfLetter(c)];
+        assert(s == r1);
+    }
+}
 
 // creates the FSM simulation
 bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
-
-    // get number of lines of file which is number of inputs > nextStates for test1.fsm
-    int numLines = countLines(defsFile);
 
     FILE *fsmDef = fopen(defsFile, "r");
 
@@ -134,19 +217,18 @@ bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
     }
 
     printf("processing FSM definition file test1.fsm\n");
-    printf("FSM has %d transitions\n",  numLines);
 
     int curState;
     int nextState;
     char input;
 
     // struct for each line of FSM inputs
-    struct InputNextState arrInputStructs[numLines];
+    struct InputNextState arrInputStructs[250];
 
     int i = 0;
 
     // loops through each line in test1.inputs
-    while (fscanf(fsmDef, "%d:%[^>]>%d", &curState, &input, &nextState) != EOF) {
+    while (fscanf(fsmDef, "%d:%c>%d", &curState, &input, &nextState) != EOF) {
 
         // checks to see if the states are valid
         if (curState < 0 || nextState < 0){
@@ -156,7 +238,7 @@ bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
 
         // checks to see if the input is valid
         if (!((input <= 'z' && input  >= 'a') || (input >= 'A' && input <= 'Z'))){
-            printf("Sadly since there is a non alphabetic character as input this FSM will not work\n");
+            printf("ERROR: There is a non alphabetic character as input so this FSM will not work\n");
             return false;
         }
 
@@ -175,6 +257,9 @@ bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
     }
     fclose(fsmDef);
 
+    int numLines = i;
+    printf("FSM has %d transitions\n",  numLines);
+
     int numStatesVal = *numStates;
 
     // check to see if any "nextState" value is not considered a valid state
@@ -192,7 +277,7 @@ bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
 
     // If no state zero, not valid FSM
     if (stateZero == false){
-        printf("Sadly since there is no state zero this FSM will not work\n");
+        printf("ERROR: No state zero so this FSM will not work\n");
         return false;
     }
 
@@ -209,7 +294,7 @@ bool useFSM(char *inputsFile, struct State arrOfStates[], int *numStates) {
 
     // if file is empty leave function
     if (fsmInputs == NULL) {
-        printf("File open is unsuccessful\n");
+        printf("ERROR: File open is unsuccessful\n");
         return false;
     }
     printf("processing FSM definition file test1.inputs\n");
@@ -217,8 +302,7 @@ bool useFSM(char *inputsFile, struct State arrOfStates[], int *numStates) {
     int myState = 0;
     int step = 0;
     char theInput;
-    int prevState = 0;
-    printf("number lines of test1.inputs is %d\n", countLines(inputsFile));
+    int prevState;
 
     // loop through test1.inputs to transition through FSM with the inputs
     while (fscanf(fsmInputs, "%c\n", &theInput) != EOF) {
@@ -251,12 +335,19 @@ int main(int argc, char* argv[]) {
         struct State arrOfStates[50];
         int numStates;
         bool fsm = createFSM(argv[1], arrOfStates, &numStates);
-        printf("created it.");
-        printf("the number of states are: %d\n", numStates);
 
         if (fsm == true)
             useFSM(argv[2], arrOfStates, &numStates);
     }
+
+    ///TESTING THE FUNCTIONS
+    test_getNumOfLetter();
+    test_checkElem();
+    test_checkStateZero();
+    test_fillStructStates();
+    test_setDefaultNextStateVal();
+    test_checkNextStateValuesTrue();
+    test_checkNextStateValuesFalse();
 }
 
 
