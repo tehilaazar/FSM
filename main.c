@@ -227,8 +227,15 @@ bool createFSM(char *defsFile, struct State arrOfStates[], int *numStates) {
 
     int i = 0;
 
+    int result;
+
     // loops through each line in test1.inputs
-    while (fscanf(fsmDef, "%d:%c>%d", &curState, &input, &nextState) != EOF) {
+    while ((result = fscanf(fsmDef, "%d:%c>%d", &curState, &input, &nextState)) != EOF) {
+
+        if (result != 3) {
+            printf("ERROR: There is a line in the file that is not in the correct format\n");
+            return 0;
+        }
 
         // checks to see if the states are valid
         if (curState < 0 || nextState < 0){
